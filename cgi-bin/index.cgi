@@ -46,6 +46,14 @@ MPD UI using busybox shellscript and CGi
 					<td>
 				 		<button name="button" value="status">status</button>
 					</td>
+					<td>
+				 		<button name="button" value="volume -100">mute</button>
+					</td>
+					<td>
+				 		<button name="button" value="volume -5">volume -5</button>
+					</td>
+					<td>
+				 		<button name="button" value="volume +5">volume +5</button>
 				</tr>	
 
 				<!-- 2行目 -->
@@ -98,7 +106,13 @@ MPD UI using busybox shellscript and CGi
 			</table>
 
 			$(# 変数展開でクエリを加工,デコードしxargsでmpcに渡す
-			echo ${QUERY_STRING#*\=} | urldecode | xargs mpc -q > /dev/null)
+			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 localhost 6600 | 
+
+			# 重複行を削除
+			awk '!a[$0]++{
+				print $0"<br>"
+			}'
+			)
 
     </body>
 
@@ -107,7 +121,8 @@ MPD UI using busybox shellscript and CGi
 		<p><a href="https://github.com/tekkamelon/sh-mpd">git repository</a></p>
 		<h4>debug info</h4>
 
-			<p>QUERY_STRING: $(echo "$QUERY_STRING")</p>
+			<p>QUERY_STRING: $(echo $QUERY_STRING | cut -d, -f2 | xargs busybox httpd -d)</p>
+
 
 	</footer>
 
