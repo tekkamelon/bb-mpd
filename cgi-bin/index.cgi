@@ -105,13 +105,27 @@ MPD UI using busybox shellscript and CGi
 				</tr>
 			</table>
 
-			$(# 変数展開でクエリを加工,デコードしxargsでmpcに渡す
-			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 localhost 6600 | 
+			$(# cutでクエリを加工,デコードしxargsでbusybox httpdでデコード
+			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | 
+
+			# デコードした文字列をprintfでncに渡す
+			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 localhost 6600 | 
+
+			# "OK"にマッチしない文字列をボタン化
+			awk '!/OK/{
+				print "<p><button name=button value="$0">"$0"</button></p>"
+			}
+
+			# "OK"にマッチする文字列を"<p>"タグ付きで出力
+			/OK/{
+				print "<p>"$0"</p>"
+			}' |
 
 			# 重複行を削除
 			awk '!a[$0]++{
-				print $0"<br>"
-			}'
+				print $0
+			}' 
+
 			)
 
     </body>
@@ -122,7 +136,6 @@ MPD UI using busybox shellscript and CGi
 		<h4>debug info</h4>
 
 			<p>QUERY_STRING: $(echo $QUERY_STRING | cut -d, -f2 | xargs busybox httpd -d)</p>
-
 
 	</footer>
 
