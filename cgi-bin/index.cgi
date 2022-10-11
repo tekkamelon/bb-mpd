@@ -1,5 +1,6 @@
 #!/bin/busybox ash
 
+export MPD_HOST=$(cat bb-sh.conf | grep . || echo "localhost")
 echo "Content-type: text/html"
 echo ""
 
@@ -31,6 +32,7 @@ MPD UI using busybox shellscript and CGi
 		<!-- 入力フォーム -->
 		<form name="FORM" method="GET" >
 
+			<p>debug_info:$(echo $MPD_HOST)</p>
 			<!-- 音楽の操作ボタンをtableでレイアウト -->
 			<table border="1" cellspacing="5">
 
@@ -109,7 +111,7 @@ MPD UI using busybox shellscript and CGi
 			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | 
 
 			# デコードした文字列をprintfでncに渡す
-			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 localhost 6600 | 
+			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 $MPD_HOST 6600 | 
 
 			# "OK"にマッチしない文字列をボタン化
 			awk '!/OK/{
@@ -132,7 +134,7 @@ MPD UI using busybox shellscript and CGi
 
 	<footer>
 		<h4>source code</h4>
-		<p><a href="https://github.com/tekkamelon/sh-mpd">git repository</a></p>
+		<p><a href="https://github.com/tekkamelon/bb-mpd">git repository</a></p>
 		<h4>debug info</h4>
 
 			<p>QUERY_STRING: $(echo $QUERY_STRING | cut -d, -f2 | xargs busybox httpd -d)</p>
