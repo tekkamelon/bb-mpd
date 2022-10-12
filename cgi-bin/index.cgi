@@ -1,6 +1,17 @@
 #!/bin/busybox ash
 
-export MPD_HOST=$(cat bb-sh.conf | grep . || echo "localhost")
+export MPD_HOST=$(# bb-sh.confからホスト名を環境変数に設定
+	cat bb-sh.conf | 
+
+	# hostの設定部分を抽出
+	awk -F":" /host/'{
+		print $2
+	}' ||
+
+	# hostが無い場合はlocalhost
+	echo "localhost"
+	)
+
 echo "Content-type: text/html"
 echo ""
 
@@ -111,7 +122,7 @@ MPD UI using busybox shellscript and CGi
 			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | 
 
 			# デコードした文字列をprintfでncに渡す
-			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 1 $MPD_HOST 6600 | 
+			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 3 $MPD_HOST 6600 | 
 
 			# "OK"にマッチしない文字列をボタン化
 			awk '!/OK/{
