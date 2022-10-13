@@ -4,9 +4,7 @@ export MPD_HOST=$(# bb-sh.confからホスト名を環境変数に設定
 	cat bb-sh.conf | 
 
 	# hostの設定部分を抽出
-	awk -F":" /host/'{
-		print $2
-	}' ||
+	head -n 1 ||
 
 	# hostが無い場合はlocalhost
 	echo "localhost"
