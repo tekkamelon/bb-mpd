@@ -1,10 +1,7 @@
-#!/bin/busybox ash
+#!/bin/sh
 
 export MPD_HOST=$(# bb-sh.confからホスト名を環境変数に設定
-	cat bb-sh.conf | 
-
-	# hostの設定部分を抽出
-	head -n 1 ||
+	cat bb-sh.conf | grep . ||
 
 	# hostが無い場合はlocalhost
 	echo "localhost"
@@ -146,7 +143,7 @@ MPD UI using busybox shellscript and CGi
 		<p><a href="https://github.com/tekkamelon/bb-mpd">git repository</a></p>
 		<h4>debug info</h4>
 
-			<p>QUERY_STRING: $(echo $QUERY_STRING | cut -d, -f2 | xargs busybox httpd -d)</p>
+			<p>QUERY_STRING: $(echo $QUERY_STRING | cut -d"," -f2 | xargs busybox httpd -d)</p>
 
 	</footer>
 
