@@ -1,10 +1,23 @@
-#!/bin/sh
+#!/bin/busybox ash
 
-export MPD_HOST=$(# bb-sh.confからホスト名を環境変数に設定
-	cat bb-sh.conf | grep . ||
+export $(# bb-sh.confからホスト名,ポート番号を環境変数に設定
+	cat bb-sh.conf | 
+	
+	# 1行目を"MPD_HOSTに設定"
+	awk 'NR == 1{
+		print "MPD_HOST="$0
+	}
 
-	# hostが無い場合はlocalhost
-	echo "localhost"
+	# 2行目を"MPD_PORT"に設定
+	NR == 2{
+		print "MPD_PORT="$0
+	}' |
+	
+	# xargsでexportに渡す
+	xargs -L 1 || 
+
+	# 失敗した場合はホスト名に"localhost",ポート番号に"6600"をそれぞれ設定
+	printf "MPD_HOST=localhost\nMPD_PORT=6600\n" | xargs -L 1
 	)
 
 echo "Content-type: text/html"
@@ -38,7 +51,7 @@ MPD UI using busybox shellscript and CGi
 		<!-- 入力フォーム -->
 		<form name="FORM" method="GET" >
 
-			<p>debug_info:$(echo $MPD_HOST)</p>
+			<p>$(printf "host:$MPD_HOST<br>port:$MPD_PORT<br>")</p>
 			<!-- 音楽の操作ボタンをtableでレイアウト -->
 			<table border="1" cellspacing="5">
 
