@@ -1,5 +1,6 @@
 #!/bin/busybox ash
 
+# 環境変数で接続先ホスト,ポート番号を設定,データがない場合は"localhost","6600"
 export MPD_HOST=$(cat bb-sh.conf | sed -n "1p" | grep . || echo "localhost")
 export MPD_PORT=$(cat bb-sh.conf | sed -n "2p" | grep . || echo "6600")
 

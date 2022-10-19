@@ -1,6 +1,6 @@
 #!/bin/busybox ash
 
-
+# 環境変数で接続先ホスト,ポート番号を設定,データがない場合は"localhost","6600"
 export MPD_HOST=$(cat bb-sh.conf | sed -n "1p" | grep . || echo "localhost")
 export MPD_PORT=$(cat bb-sh.conf | sed -n "2p" | grep . || echo "6600")
 
@@ -60,19 +60,16 @@ cat << EOS
 
 			# POSTで受け取った文字列を変数に代入
 			cat_post=$(cat)
-		
-			# POSTに"http"が含まれていれば真,なければ偽
-			if echo "${cat_post}" | grep -q "http" ; then
 
-				# 真の場合,デコードし次の曲に追加,成功時のみ再生
-				echo ${cat_post} | busybox httpd -d | mpc insert && mpc next | sed "s/$/<br>/g" 2>&1
+				# POSTを加工,先頭の数字のみに
+				echo ${cat_post} | cut -d"=" -f2 |
+
+				# xargsでprintfに渡し,ncに文字列を送る
+				xargs -I{} printf "play {}\nclose\n" | nc -w 3 $MPD_HOST $MPD_PORT |
+
+				# エラー出力ごと表示
+				sed "s/$/<br>/g" 2>&1
 			
-			else
-
-				# 偽の場合,POSTを変数展開で加工,デコードしてmpcに渡す
-				echo ${cat_post} | busybox httpd -d | xargs mpc searchplay | sed "s/$/<br>/g" 2>&1 
-
-			fi
 			)</p>
 
 			<!-- リンク -->
@@ -92,19 +89,12 @@ cat << EOS
 			# キューされた曲をgrepで検索し結果を表示
 			printf "playlist\nclose\n" | nc -w 3 $MPD_HOST $MPD_PORT | grep -i ${search_var} |
 
-			# "/"と" - "を区切り文字に指定,先頭が"http"にマッチしない文字列をボタン化
-			awk -F':' '!/^http/{
+			# ":"を区切り文字に指定,先頭が"OK MPD"にマッチしない文字列をボタン化
+			awk -F':' '!/^OK MPD/{
 
-				# １番目のフィールドをボタン化
+				# valueに1フィールド目,行全体を表示
 				print "<p><button name=button value="$1">"$0"</button>";
 
-				# 最終フィールドをボタン化
-				# "<button name=button value="$NF">"$NF"</button></p>"
-			}
-
-			# 先頭が"http"にマッチする文字列をボタン化
-			/^http/{
-				print "<p><button name=button value="$1">"$0"</button></p>"
 			}' |
 
 			# 重複行を削除
