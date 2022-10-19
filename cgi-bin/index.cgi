@@ -1,24 +1,7 @@
 #!/bin/busybox ash
 
-export $(# bb-sh.confからホスト名,ポート番号を環境変数に設定
-	cat bb-sh.conf | 
-	
-	# 1行目を"MPD_HOSTに設定"
-	awk 'NR == 1{
-		print "MPD_HOST="$0
-	}
-
-	# 2行目を"MPD_PORT"に設定
-	NR == 2{
-		print "MPD_PORT="$0
-	}' |
-	
-	# xargsでexportに渡す
-	xargs -L 1 || 
-
-	# 失敗した場合はホスト名に"localhost",ポート番号に"6600"をそれぞれ設定
-	printf "MPD_HOST=localhost\nMPD_PORT=6600\n" | xargs -L 1
-	)
+export MPD_HOST=$(cat bb-sh.conf | sed -n "1p" | grep . || echo "localhost")
+export MPD_PORT=$(cat bb-sh.conf | sed -n "2p" | grep . || echo "6600")
 
 echo "Content-type: text/html"
 echo ""
@@ -29,7 +12,7 @@ cat << EOS
     <head>
         <meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width,initial-scale=1.0">
-        <title>sh-MPD</title>
+        <title>bb-MPD</title>
     </head>
 
 	<header>
@@ -51,7 +34,7 @@ MPD UI using busybox shellscript and CGi
 		<!-- 入力フォーム -->
 		<form name="FORM" method="GET" >
 
-			<p>$(printf "host:$MPD_HOST<br>port:$MPD_PORT<br>")</p>
+			<p>$(echo "host:$MPD_HOST<br>port:$MPD_PORT<br>")</p>
 			<!-- 音楽の操作ボタンをtableでレイアウト -->
 			<table border="1" cellspacing="5">
 
@@ -148,6 +131,12 @@ MPD UI using busybox shellscript and CGi
 			}' 
 
 			)
+
+		<!-- リンク -->
+		<button><a href="queued/queued.cgi">Queued</a></button>
+		<button><a href="directory/directory.cgi">Directoty</a></button>
+		<button><a href="playlist/playlist.cgi">Playlist</a></button>
+		<button><a href="settings/settings.cgi">Settings</a></button>
 
     </body>
 
