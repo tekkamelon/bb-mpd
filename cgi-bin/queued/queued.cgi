@@ -27,11 +27,20 @@ cat << EOS
 			
 			<p>$(# playlistのセーブ
 
-			# クエリを変数展開で加工
-			echo ${QUERY_STRING#*\=} | 
+			# クエリに"save"があるかを確認,あれば真,なければ偽
+			if echo $QUERY_STRING | grep -q "save" ; then
 
-			# "&input_string="をスペースに置換,デコードしxargsでmpcに渡す
-			sed "s/\&input_string\=/ /g" | busybox httpd -d | xargs mpc -q > /dev/null
+				# 真の場合は"=","&"を区切り文字に指定,2,4フィールド目をスペースで区切り出力
+				echo $QUERY_STRING | awk -F'[=&]' '{print $2" "$4}' | 
+
+				# ncに渡す
+				nc -w 1 $MPD_HOST $MPD_PORT
+
+			else 
+
+				# 偽の場合は何もしない
+				:
+			fi
 			)</p>
 
 			<!-- クエリの表示 -->
@@ -65,7 +74,7 @@ cat << EOS
 				echo ${cat_post} | cut -d"=" -f2 |
 
 				# xargsでprintfに渡し,ncに文字列を送る
-				xargs -I{} printf "play {}\nclose\n" | nc -w 3 $MPD_HOST $MPD_PORT |
+				xargs -I{} printf "play {}\nclose\n" | nc -w 1 $MPD_HOST $MPD_PORT |
 
 				# エラー出力ごと表示
 				sed "s/$/<br>/g" 2>&1
@@ -78,22 +87,29 @@ cat << EOS
 			<button><a href="/cgi-bin/playlist/playlist.cgi">Playlist</a></button>
 
 			<!-- プレイリストの一覧を表示 -->
-			$(# クエリ内に"match"があるかどうかを判断
+			$(# クエリ内に"match"があるかどうかを判断し,あれば変数に代入
 
-			# クエリを変数展開で加工,デコードしgrepの終了ステータスで文字列があるかどうかを判断
-			search_var=$(echo ${QUERY_STRING#*\=match&input_string\=} | busybox httpd -d | grep .) ||
+			search_var=$(# クエリ内に"match"があれば真,なければ偽
+				if echo "$QUERY_STRING" | grep -q "match" ; then
 
-			# 偽の場合は"."で全てにマッチングする行を表示
-			search_var="."
+					echo $QUERY_STRING | cut -d"=" -f3
+
+				else
+
+					# 偽の場合は"."で全てにマッチングする行を表示
+					echo "."
+
+				fi
+			)
 
 			# キューされた曲をgrepで検索し結果を表示
-			printf "playlist\nclose\n" | nc -w 3 $MPD_HOST $MPD_PORT | grep -i ${search_var} |
+			printf "playlist\nclose\n" | nc -w 1 $MPD_HOST $MPD_PORT | grep -i $search_var |
 
 			# ":"を区切り文字に指定,先頭が"OK MPD"にマッチしない文字列をボタン化
 			awk -F':' '!/^OK MPD/{
 
 				# valueに1フィールド目,行全体を表示
-				print "<p><button name=button value="$1">"$0"</button>";
+				print "<p><button name=button value="$1">"$0"</button>"
 
 			}' |
 
