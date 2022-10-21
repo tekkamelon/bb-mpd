@@ -110,11 +110,23 @@ MPD UI using busybox shellscript and CGi
 				</tr>
 			</table>
 
-			$(# cutでクエリを加工,デコードしxargsでbusybox httpdでデコード
-			echo $QUERY_STRING | cut -d"=" -f2 | xargs busybox httpd -d | 
+			$(# クエリを変数展開で加工,デコード
+			echo ${QUERY_STRING#*=} | xargs busybox httpd -d | 
 
-			# デコードした文字列をprintfでncに渡す
-			xargs -I{} printf "{}\nstatus\nclose\n" | nc -w 3 $MPD_HOST 6600 | 
+			# デコードした文字列をawkで加工,ncに渡す
+			awk '{
+				
+				# 受け取った文字列
+				print $0
+
+				# ステータスの表示
+				print "status"
+
+				# 通信の終了
+				print "close"
+				}' | 
+
+			nc $MPD_HOST $MPD_PORT | 
 
 			# "OK"にマッチしない文字列をボタン化
 			awk '!/OK/{
