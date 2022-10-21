@@ -1,8 +1,8 @@
 #!/bin/busybox ash
 
 # 環境変数で接続先ホスト,ポート番号を設定,データがない場合は"localhost","6600"
-export MPD_HOST=$(cat bb-sh.conf | sed -n "1p" | grep . || echo "localhost")
-export MPD_PORT=$(cat bb-sh.conf | sed -n "2p" | grep . || echo "6600")
+export MPD_HOST=$(cat ../bb-sh.conf | sed -n "1p" | grep . || echo "localhost")
+export MPD_PORT=$(cat ../bb-sh.conf | sed -n "2p" | grep . || echo "6600")
 
 echo "Content-type: text/html"
 echo ""
@@ -30,11 +30,14 @@ cat << EOS
 			# クエリに"save"があるかを確認,あれば真,なければ偽
 			if echo $QUERY_STRING | grep -q "save" ; then
 
-				# 真の場合は"=","&"を区切り文字に指定,2,4フィールド目をスペースで区切り出力
-				echo $QUERY_STRING | awk -F'[=&]' '{print $2" "$4}' | 
+				# 真の場合はデコードしawkに渡す
+				echo $QUERY_STRING | xargs httpd -d | 
+
+				# "=","&"を区切り文字に指定,2,4フィールド目でスペースを挟み,closeを付けて出力
+				awk -F'[=&]' '{print $2" "$4"\n""close"}' | 
 
 				# ncに渡す
-				nc -w 1 $MPD_HOST $MPD_PORT
+				nc $MPD_HOST $MPD_PORT
 
 			else 
 
@@ -70,15 +73,17 @@ cat << EOS
 			# POSTで受け取った文字列を変数に代入
 			cat_post=$(cat)
 
-				# POSTを加工,先頭の数字のみに
-				echo ${cat_post} | cut -d"=" -f2 |
+				# POSTを変数展開で加工,先頭の数字のみに
+				echo ${cat_post#*=} | 
 
-				# xargsでprintfに渡し,ncに文字列を送る
-				xargs -I{} printf "play {}\nclose\n" | nc -w 1 $MPD_HOST $MPD_PORT |
+				# awkで数値にマッチするか判定,"play",スペース,改行,"close"を付与
+				awk '/[0-9]/{print "play"" "$0"\n""close"}' |
+
+				# ncに渡す
+				nc $MPD_HOST $MPD_PORT |
 
 				# エラー出力ごと表示
 				sed "s/$/<br>/g" 2>&1
-			
 			)</p>
 
 			<!-- リンク -->
@@ -87,26 +92,22 @@ cat << EOS
 			<button><a href="/cgi-bin/playlist/playlist.cgi">Playlist</a></button>
 
 			<!-- プレイリストの一覧を表示 -->
-			$(# クエリ内に"match"があるかどうかを判断し,あれば変数に代入
+			$(# クエリ内に"match&input_string=#任意の1文字以上"があれば真,なければ偽
+			echo $QUERY_STRING | grep -q "match&input_string=." 
 
-			search_var=$(# クエリ内に"match"があれば真,なければ偽
-				if echo "$QUERY_STRING" | grep -q "match" ; then
+				search_var=$(# 真の場合はクエリを変数展開で加工
 
-					echo $QUERY_STRING | cut -d"=" -f3
+					echo ${QUERY_STRING#*\=match\&input_string\=} |
 
-				else
-
-					# 偽の場合は"."で全てにマッチングする行を表示
-					echo "."
-
-				fi
-			)
+					# デコード,偽の場合は"."を出力
+					xargs busybox httpd -d || echo "."
+					)
 
 			# キューされた曲をgrepで検索し結果を表示
-			printf "playlist\nclose\n" | nc -w 1 $MPD_HOST $MPD_PORT | grep -i $search_var |
+			printf "playlist\nclose\n" | nc $MPD_HOST $MPD_PORT | grep -i $search_var |
 
-			# ":"を区切り文字に指定,先頭が"OK MPD"にマッチしない文字列をボタン化
-			awk -F':' '!/^OK MPD/{
+			# ":"を区切り文字に指定,先頭が"OK"にマッチしない文字列をボタン化
+			awk -F':' '!/^OK/{
 
 				# valueに1フィールド目,行全体を表示
 				print "<p><button name=button value="$1">"$0"</button>"
